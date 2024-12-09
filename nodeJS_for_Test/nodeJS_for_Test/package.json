@@ -50,5 +50,10 @@
     "node": ">= 18.x.x",
     "npm": ">= 9.x.x",
     "yarn": ">= 1.22.x"
-  }
+  },
+  "description": "",
+  "main": "app.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
