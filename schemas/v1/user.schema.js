@@ -49,8 +49,6 @@ const UserSchema = new mongoose.Schema(
       required: true,
       refPath: "userTypeData",
     },
-    macAddress: { type: String, required: true },  // เพิ่ม macAddress
-    hardwareId: { type: String, required: true },  // เพิ่ม hardwareId
     userTypeData: {
       type: String,
       required: true,
