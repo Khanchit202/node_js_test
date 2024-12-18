@@ -1,6 +1,6 @@
 const Product = require("../schemas/v1/product");
 
-// Create a new product
+// สร้างสินค้าใหม่
 exports.createProduct = async (req, res) => {
   try {
     const product = new Product(req.body);
@@ -11,7 +11,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Read all products
+// อ่านสินค้าทั้งหมด
 exports.getProducts = async (req, res) => {
   try {
     const products = await Product.find();
@@ -21,7 +21,7 @@ exports.getProducts = async (req, res) => {
   }
 };
 
-// Read a single product by ID
+// อ่านสินค้าตาม ID
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -34,7 +34,7 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// Update a product
+// อัปเดตสินค้า
 exports.updateProduct = async (req, res) => {
   try {
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -51,7 +51,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-// Delete a product
+// ลบสินค้า
 exports.deleteProduct = async (req, res) => {
   try {
     const deletedProduct = await Product.findByIdAndDelete(req.params.id);
