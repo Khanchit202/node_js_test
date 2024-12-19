@@ -25,46 +25,89 @@ const refreshTokenCatchError = (err, res) => {
 };
 
 const verifyAccessToken = async (req, res, next) => {
-  const accessToken = req.headers["authorization"]?.replace("Bearer ", "");
-  const hardwareId = req.headers["hardware-id"];
+  const role = req.headers["role"];
 
-  if (!accessToken || !hardwareId) {
-    return res.status(401).send({
-      status: "error",
-      message: "TOKEN and Hardware ID are required for authentication",
-    });
-  }
-
-  jwt.verify(accessToken, JWT_ACCESS_TOKEN_SECRET, async (err, decoded) => {
-    if (err) {
-      return accessTokenCatchError(err, res);
-    }
-
-    const lastAccessToken = await redis.get(
-      `Last_Access_Token_${decoded.userId}_${hardwareId}`
+  if (role != "superadmin") {
+    let macAddressRegex = new RegExp(
+      /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}.[0-9a-fA-F]{4}.[0-9a-fA-F]{4})$/
     );
 
-    if (!lastAccessToken) {
-      console.error(`Access Token not found in Redis for user ID: ${decoded.userId}`);
+    if (!req.headers["mac-address"])
+      return res
+        .status(401)
+        .send({ status: "error", message: "MAC address is required!" });
+
+    if (!req.headers["hardware-id"])
+      return res
+        .status(401)
+        .send({ status: "error", message: "Hardware ID is required!" });
+
+    if (macAddressRegex.test(req.headers["mac-address"]) === false)
+      return res
+        .status(401)
+        .send({ status: "error", message: "MAC address is invalid!" });
+
+    if (!req.headers["authorization"])
       return res.status(401).send({
         status: "error",
-        message: "Access Token not found in Redis",
+        message: "TOKEN is required for authentication",
       });
-    }
+    const accessToken = req.headers["authorization"].replace("Bearer ", "");
 
-    if (lastAccessToken !== accessToken) {
-      console.error(`Access Token mismatch for user ID: ${decoded.userId}`);
-      return res.status(401).send({
-        status: "error",
-        message: "Incorrect Access Token!",
-      });
-    }
+    jwt.verify(accessToken, JWT_ACCESS_TOKEN_SECRET, async (err, decoded) => {
+      if (err) {
+        return accessTokenCatchError(err, res);
+      } else {
+        let MacAddressIsMember = await redis.sIsMember(
+          `Mac_Address_${decoded.userId}`,
+          req.headers["mac-address"]
+        );
+        let hardwareIdIsMember = await redis.sIsMember(
+          `Hardware_ID_${decoded.userId}`,
+          req.headers["hardware-id"]
+        );
 
-    req.user = decoded;
-    next();
-  });
+        if (!MacAddressIsMember && !hardwareIdIsMember) {
+          return res.status(401).send({
+            status: "error",
+            message: "Both Mac Address AND Hardware ID does not exist!",
+          });
+        } else if (!MacAddressIsMember) {
+          return res
+            .status(401)
+            .send({ status: "error", message: "Mac Address does not exist!" });
+        } else if (!hardwareIdIsMember) {
+          return res
+            .status(401)
+            .send({ status: "error", message: "Hardware ID does not exist!" });
+        }
+        const lastAccessToken = await redis.get(
+          `Last_Access_Token_${decoded.userId}_${req.headers["hardware-id"]}`
+        );
+        if (lastAccessToken !== accessToken) {
+          return res
+            .status(401)
+            .send({ status: "error", message: `Incorrect Access Token!` });
+        }
+      }
+      req.user = decoded;
+      return next();
+    });
+  } else {
+    const superAdminApiKey = req.headers["x-super-admin-api-key"];
+    if (
+      superAdminApiKey &&
+      superAdminApiKey === process.env.SUPER_ADMIN_API_KEY
+    ) {
+      console.log("you are in super admin mode : (from verifyAccessToken)");
+      return next();
+    } else {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Invalid API key for super admin" });
+    }
+  }
 };
-
 
 const verifyRefreshToken = (req, res, next) => {
   if (!req.headers["authorization"])

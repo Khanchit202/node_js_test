@@ -626,84 +626,29 @@ const getOneAccount = async (req, res) => {
 };
 
 const getAllAccounts = async (req, res) => {
-  try {
-    console.log("req.user:", req.user);
+  let allUsers = await user.find();
+  let allUsersCount = await user.count();
 
-    // ตรวจสอบ req.user
-    if (!req.user || !req.user.userId) {
-      console.error("Invalid user in request:", req.user);
-      return res.status(401).json({
-        status: "error",
-        message: "Unauthorized: User ID not found.",
-      });
-    }
+  // const accessToken = req.headers["authorization"].replace("Bearer ", "");
 
-    const userIdFromParams = req.params.user;
-    console.log("User ID from params:", userIdFromParams);
+  // await redis.sAdd(`Used_Access_Token_${req.user.userId}`, accessToken);
 
-    // ตรวจสอบ userId จาก params
-    if (!userIdFromParams) {
-      console.error("User ID is missing in request params");
-      return res.status(400).json({
-        status: "error",
-        message: "User ID parameter is required.",
-      });
-    }
+  // const newAccessToken = jwt.sign(
+  //   { userId: req.user.userId, name: req.user.name, email: req.user.email },
+  //   process.env.JWT_ACCESS_TOKEN_SECRET,
+  //   { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+  // );
+  // redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken);
 
-    // ค้นหาผู้ใช้ในฐานข้อมูล
-    let userData = await user.findById(userIdFromParams);
-    if (!userData) {
-      console.error(`User not found: ${userIdFromParams}`);
-      return res.status(404).json({
-        status: "error",
-        message: "User not found.",
-      });
-    }
-
-    // นับจำนวนผู้ใช้ทั้งหมด
-    let allUsersCount = await user.countDocuments();
-
-    // สร้าง Access Token ใหม่
-    const newAccessToken = jwt.sign(
-      { userId: req.user.userId, name: req.user.name, email: req.user.email },
-      process.env.JWT_ACCESS_TOKEN_SECRET,
-      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
-    );
-
-    const hardwareId = req.headers["hardware-id"];
-    if (!hardwareId) {
-      console.error("Hardware ID is missing in request headers");
-      return res.status(400).json({
-        status: "error",
-        message: "Hardware ID is required in headers.",
-      });
-    }
-
-    // เก็บ Access Token ใน Redis
-    await redis.set(
-      `Last_Access_Token_${req.user.userId}_${hardwareId}`,
-      newAccessToken
-    );
-
-    return res.status(200).json({
+  await res
+    .status(200)
+    .json({
+      authenticated_user: req.user,
       status: "success",
-      authenticated_user: {
-        userId: req.user.userId,
-        name: req.user.name,
-        email: req.user.email,
-      },
-      data: {
-        totalUsers: allUsersCount,
-        userDetails: userData,
-      },
+      data: { count: allUsersCount, users: allUsers },
       token: newAccessToken,
     });
-  } catch (error) {
-    console.error("Error in getAllAccounts:", error);
-    return res.status(500).json({ status: "error", message: error.message });
-  }
 };
-
 
 const deleteOneAccount = async (req, res) => {
   if (!req.body) {
