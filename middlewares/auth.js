@@ -28,24 +28,24 @@ const verifyAccessToken = async (req, res, next) => {
   const role = req.headers["role"];
 
   if (role != "superadmin") {
-    let macAddressRegex = new RegExp(
-      /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}.[0-9a-fA-F]{4}.[0-9a-fA-F]{4})$/
-    );
+    // let macAddressRegex = new RegExp(
+    //   /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}.[0-9a-fA-F]{4}.[0-9a-fA-F]{4})$/
+    // );
 
-    if (!req.headers["mac-address"])
-      return res
-        .status(401)
-        .send({ status: "error", message: "MAC address is required!" });
+    // if (!req.headers["mac-address"])
+    //   return res
+    //     .status(401)
+    //     .send({ status: "error", message: "MAC address is required!" });
 
-    if (!req.headers["hardware-id"])
-      return res
-        .status(401)
-        .send({ status: "error", message: "Hardware ID is required!" });
+    // if (!req.headers["hardware-id"])
+    //   return res
+    //     .status(401)
+    //     .send({ status: "error", message: "Hardware ID is required!" });
 
-    if (macAddressRegex.test(req.headers["mac-address"]) === false)
-      return res
-        .status(401)
-        .send({ status: "error", message: "MAC address is invalid!" });
+    // if (macAddressRegex.test(req.headers["mac-address"]) === false)
+    //   return res
+    //     .status(401)
+    //     .send({ status: "error", message: "MAC address is invalid!" });
 
     if (!req.headers["authorization"])
       return res.status(401).send({
@@ -58,29 +58,29 @@ const verifyAccessToken = async (req, res, next) => {
       if (err) {
         return accessTokenCatchError(err, res);
       } else {
-        let MacAddressIsMember = await redis.sIsMember(
-          `Mac_Address_${decoded.userId}`,
-          req.headers["mac-address"]
-        );
-        let hardwareIdIsMember = await redis.sIsMember(
-          `Hardware_ID_${decoded.userId}`,
-          req.headers["hardware-id"]
-        );
+        // let MacAddressIsMember = await redis.sIsMember(
+        //   `Mac_Address_${decoded.userId}`,
+        //   req.headers["mac-address"]
+        // );
+        // let hardwareIdIsMember = await redis.sIsMember(
+        //   `Hardware_ID_${decoded.userId}`,
+        //   req.headers["hardware-id"]
+        // );
 
-        if (!MacAddressIsMember && !hardwareIdIsMember) {
-          return res.status(401).send({
-            status: "error",
-            message: "Both Mac Address AND Hardware ID does not exist!",
-          });
-        } else if (!MacAddressIsMember) {
-          return res
-            .status(401)
-            .send({ status: "error", message: "Mac Address does not exist!" });
-        } else if (!hardwareIdIsMember) {
-          return res
-            .status(401)
-            .send({ status: "error", message: "Hardware ID does not exist!" });
-        }
+        // if (!MacAddressIsMember && !hardwareIdIsMember) {
+        //   return res.status(401).send({
+        //     status: "error",
+        //     message: "Both Mac Address AND Hardware ID does not exist!",
+        //   });
+        // } else if (!MacAddressIsMember) {
+        //   return res
+        //     .status(401)
+        //     .send({ status: "error", message: "Mac Address does not exist!" });
+        // } else if (!hardwareIdIsMember) {
+        //   return res
+        //     .status(401)
+        //     .send({ status: "error", message: "Hardware ID does not exist!" });
+        // }
         const lastAccessToken = await redis.get(
           `Last_Access_Token_${decoded.userId}_${req.headers["hardware-id"]}`
         );
