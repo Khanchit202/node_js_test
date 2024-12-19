@@ -40,7 +40,7 @@ router.patch("/unverify/phone/:user", verifyAccessToken, unverifyPhone);
 router.post("/refreshtokenotp/verify", verifyRefreshToken, verifyRefreshTokenOTP);
 
 //? Get One Account
-router.get("/:user", [getAccountRateLimiter], getOneAccount);
+router.get("/:user", [getAccountRateLimiter, verifyAccessToken], getOneAccount);
 
 router.get("/", [getAccountsRateLimiter, verifyAccessToken], getAllAccounts);
 
