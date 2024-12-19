@@ -633,12 +633,12 @@ const getAllAccounts = async (req, res) => {
 
   // await redis.sAdd(`Used_Access_Token_${req.user.userId}`, accessToken);
 
-  // const newAccessToken = jwt.sign(
-  //   { userId: req.user.userId, name: req.user.name, email: req.user.email },
-  //   process.env.JWT_ACCESS_TOKEN_SECRET,
-  //   { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
-  // );
-  // redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken);
+  const newAccessToken = jwt.sign(
+    { userId: req.user.userId, name: req.user.name, email: req.user.email },
+    process.env.JWT_ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+  );
+  redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken);
 
   await res
     .status(200)

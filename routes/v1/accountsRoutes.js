@@ -42,7 +42,7 @@ router.post("/refreshtokenotp/verify", verifyRefreshToken, verifyRefreshTokenOTP
 //? Get One Account
 router.get("/:user", [getAccountRateLimiter, verifyAccessToken], getOneAccount);
 
-router.get("/", getAllAccounts);
+router.get("/", [getAccountsRateLimiter, verifyAccessToken], getAllAccounts);
 
 router.delete("/:user", [deleteAccountRateLimiter, verifyAccessToken], deleteOneAccount);
 
