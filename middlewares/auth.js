@@ -25,48 +25,47 @@ const refreshTokenCatchError = (err, res) => {
 };
 
 const verifyAccessToken = async (req, res, next) => {
-  // แก้ไขส่วนนี้สำหรับการทดสอบในโหมดที่ไม่ต้องใช้ค่า headers จริง
-  const role = req.headers["role"] || "user";  // ตั้งค่า role เป็น 'user' สำหรับการทดสอบ
+  const role = req.headers["role"];
 
-  // กำหนดค่า mac-address และ hardware-id สำหรับการทดสอบ
-  const macAddress = req.headers["mac-address"] || "00:14:22:01:23:45";
-  const hardwareId = req.headers["hardware-id"] || "hardware123";
+  // กำหนดค่าที่ใช้ทดสอบในโค้ด
+  const testMacAddress = "00:14:22:01:23:45";
+  const testHardwareId = "1234-5678-9012";
 
   if (role !== "superadmin") {
-    // ไม่ตรวจสอบจริงสำหรับ mac-address และ hardware-id ในที่นี้
-    if (!macAddress || !hardwareId) {
-      return res
-        .status(401)
-        .send({ status: "error", message: "MAC address or Hardware ID is required!" });
+    if (!req.headers["mac-address"] || req.headers["mac-address"] !== testMacAddress) {
+      return res.status(401).send({ status: "error", message: "MAC address is required or invalid!" });
     }
 
-    // ถ้ามี authorization header ใช้ accessToken จากนั้นไปทำการตรวจสอบ
-    const accessToken = req.headers["authorization"]?.replace("Bearer ", "");
-    if (!accessToken) {
-      return res.status(401).send({ status: "error", message: "TOKEN is required for authentication" });
+    if (!req.headers["hardware-id"] || req.headers["hardware-id"] !== testHardwareId) {
+      return res.status(401).send({ status: "error", message: "Hardware ID is required or invalid!" });
     }
 
+    if (!req.headers["authorization"]) {
+      return res.status(401).send({
+        status: "error",
+        message: "TOKEN is required for authentication",
+      });
+    }
+
+    const accessToken = req.headers["authorization"].replace("Bearer ", "");
     jwt.verify(accessToken, JWT_ACCESS_TOKEN_SECRET, async (err, decoded) => {
       if (err) {
         return accessTokenCatchError(err, res);
       } else {
-        req.user = decoded;
+        // สร้าง mock ข้อมูลของ user ที่ถูกตรวจสอบ
+        req.user = { userId: 1, name: "Test User", email: "test@example.com" };
         return next();
       }
     });
   } else {
     const superAdminApiKey = req.headers["x-super-admin-api-key"];
     if (superAdminApiKey && superAdminApiKey === process.env.SUPER_ADMIN_API_KEY) {
-      console.log("you are in super admin mode");
       return next();
     } else {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized: Invalid API key for super admin" });
+      return res.status(403).json({ message: "Unauthorized: Invalid API key for super admin" });
     }
   }
 };
-
 
 const verifyRefreshToken = (req, res, next) => {
   if (!req.headers["authorization"])

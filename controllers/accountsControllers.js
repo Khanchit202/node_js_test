@@ -626,23 +626,29 @@ const getOneAccount = async (req, res) => {
 };
 
 const getAllAccounts = async (req, res) => {
-  const mockUsers = [
-    { userId: 1, name: "John Doe", email: "johndoe@example.com" },
-    { userId: 2, name: "Jane Doe", email: "janedoe@example.com" }
-  ];
-  const mockUserCount = mockUsers.length;
+  let allUsers = await user.find();
+  let allUsersCount = await user.count();
 
-  // การสร้าง accessToken mock สำหรับการทดสอบ
-  const newAccessToken = "mockedAccessTokenForTesting";
-  
-  return res.status(200).json({
-    authenticated_user: req.user,
-    status: "success",
-    data: { count: mockUserCount, users: mockUsers },
-    token: newAccessToken
-  });
+  // const accessToken = req.headers["authorization"].replace("Bearer ", "");
+
+  // await redis.sAdd(`Used_Access_Token_${req.user.userId}`, accessToken);
+
+  const newAccessToken = jwt.sign(
+    { userId: req.user.userId, name: req.user.name, email: req.user.email },
+    process.env.JWT_ACCESS_TOKEN_SECRET,
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+  );
+  redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken);
+
+  await res
+    .status(200)
+    .json({
+      authenticated_user: req.user,
+      status: "success",
+      data: { count: allUsersCount, users: allUsers },
+      token: newAccessToken,
+    });
 };
-
 
 const deleteOneAccount = async (req, res) => {
   if (!req.body) {
