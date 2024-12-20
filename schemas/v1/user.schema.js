@@ -20,6 +20,12 @@ const UserSchema = new mongoose.Schema(
         email: { type: Boolean, default: false },
         phone: { type: Boolean, default: false },
       },
+      role: {
+        type: String,
+        enum: ["superadmin","admin","user"],
+        default: "user"
+
+      }
     },
     lang: { type: String, default: "TH" },
     deviceFingerPrint: [

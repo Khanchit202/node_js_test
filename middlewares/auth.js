@@ -26,46 +26,88 @@ const refreshTokenCatchError = (err, res) => {
 
 const verifyAccessToken = async (req, res, next) => {
   const role = req.headers["role"];
-
-  // กำหนดค่าที่ใช้ทดสอบในโค้ด
-  const testMacAddress = "00:14:22:01:23:45";
-  const testHardwareId = "1234-5678-9012";
+  console.log("Role:", role); // ตรวจสอบค่าของ role
 
   if (role !== "superadmin") {
-    if (!req.headers["mac-address"] || req.headers["mac-address"] !== testMacAddress) {
-      return res.status(401).send({ status: "error", message: "MAC address is required or invalid!" });
+    const macAddressRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\.[0-9a-fA-F]{4}\.[0-9a-fA-F]{4})$/;
+
+    // ตรวจสอบ MAC address และ Hardware ID
+    if (!req.headers["mac-address"]) {
+      return res.status(401).json({ status: "error", message: "MAC address is required!" });
     }
 
-    if (!req.headers["hardware-id"] || req.headers["hardware-id"] !== testHardwareId) {
-      return res.status(401).send({ status: "error", message: "Hardware ID is required or invalid!" });
+    if (!req.headers["hardware-id"]) {
+      return res.status(401).json({ status: "error", message: "Hardware ID is required!" });
     }
 
+    if (!macAddressRegex.test(req.headers["mac-address"])) {
+      return res.status(401).json({ status: "error", message: "MAC address is invalid!" });
+    }
+
+    // ตรวจสอบ Authorization header
     if (!req.headers["authorization"]) {
-      return res.status(401).send({
-        status: "error",
-        message: "TOKEN is required for authentication",
-      });
+      return res.status(401).json({ status: "error", message: "TOKEN is required for authentication" });
     }
 
     const accessToken = req.headers["authorization"].replace("Bearer ", "");
+
     jwt.verify(accessToken, JWT_ACCESS_TOKEN_SECRET, async (err, decoded) => {
       if (err) {
         return accessTokenCatchError(err, res);
-      } else {
-        // สร้าง mock ข้อมูลของ user ที่ถูกตรวจสอบ
-        req.user = { userId: 1, name: "Test User", email: "test@example.com" };
-        return next();
       }
+
+      req.user = decoded; // ตั้งค่า req.user จาก decoded token
+
+      if (!req.user.userId) {
+        return res.status(401).json({ status: "error", message: "Invalid token: User ID not found." });
+      }
+
+      try {
+        // ตรวจสอบ Mac Address และ Hardware ID
+        const macAddressIsMember = await redis.sIsMember(`Mac_Address_${decoded.userId}`, req.headers["mac-address"]);
+        const hardwareIdIsMember = await redis.sIsMember(`Hardware_ID_${decoded.userId}`, req.headers["hardware-id"]);
+
+        if (!macAddressIsMember && !hardwareIdIsMember) {
+          return res.status(401).json({
+            status: "error",
+            message: "Both Mac Address AND Hardware ID do not exist!",
+          });
+        }
+        if (!macAddressIsMember) {
+          return res.status(401).json({ status: "error", message: "Mac Address does not exist!" });
+        }
+        if (!hardwareIdIsMember) {
+          return res.status(401).json({ status: "error", message: "Hardware ID does not exist!" });
+        }
+
+        // ตรวจสอบ Access Token ล่าสุด
+        const lastAccessToken = await redis.get(`Last_Access_Token_${decoded.userId}_${req.headers["hardware-id"]}`);
+        if (lastAccessToken !== accessToken) {
+          return res.status(401).json({ status: "error", message: "Incorrect Access Token!" });
+        }
+      } catch (error) {
+        console.error("Redis error:", error);
+        return res.status(500).json({ status: "error", message: "Internal server error" });
+      }
+
+      return next(); // ส่งต่อไปยังฟังก์ชันถัดไป
     });
   } else {
+    // ตรวจสอบ Super Admin Mode
     const superAdminApiKey = req.headers["x-super-admin-api-key"];
-    if (superAdminApiKey && superAdminApiKey === process.env.SUPER_ADMIN_API_KEY) {
-      return next();
-    } else {
-      return res.status(403).json({ message: "Unauthorized: Invalid API key for super admin" });
+    if (superAdminApiKey === process.env.SUPER_ADMIN_API_KEY) {
+      console.log("You are in super admin mode.");
+
+      req.user = { userId: "superadmin-id", role: "superadmin" }; // ตั้งค่า req.user สำหรับ superadmin
+      return next(); // ส่งต่อไปยังฟังก์ชันถัดไป
     }
+
+    return res.status(403).json({
+      message: "Unauthorized: Invalid API key for super admin",
+    });
   }
 };
+
 
 const verifyRefreshToken = (req, res, next) => {
   if (!req.headers["authorization"])

@@ -626,28 +626,48 @@ const getOneAccount = async (req, res) => {
 };
 
 const getAllAccounts = async (req, res) => {
-  let allUsers = await user.find();
-  let allUsersCount = await user.count();
+  try {
+    console.log("req.user:", req.user);  // ตรวจสอบค่า req.user
+    if (!req.user || !req.user.userId) {
+      return res.status(404).json({
+        status: "error",
+        message: "User ID was not found.",
+      });
+    }
 
-  // const accessToken = req.headers["authorization"].replace("Bearer ", "");
+    const userIdFromParams = req.params.user; // ดึง userId จาก URL params
+    console.log("User ID from params:", userIdFromParams); // ตรวจสอบว่าได้รับค่าหรือไม่
 
-  // await redis.sAdd(`Used_Access_Token_${req.user.userId}`, accessToken);
+    // ดึงข้อมูลจากฐานข้อมูลโดยใช้ userId ที่ได้รับ
+    let userData = await user.findById(userIdFromParams); // ใช้ findById ถ้าหาก userId เป็น MongoDB ObjectID
+    if (!userData) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found.",
+      });
+    }
 
-  const newAccessToken = jwt.sign(
-    { userId: req.user.userId, name: req.user.name, email: req.user.email },
-    process.env.JWT_ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
-  );
-  redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken);
+    let allUsersCount = await user.countDocuments();
 
-  await res
-    .status(200)
-    .json({
+    const newAccessToken = jwt.sign(
+      { userId: req.user.userId, name: req.user.name, email: req.user.email },
+      process.env.JWT_ACCESS_TOKEN_SECRET,
+      { expiresIn: process.env.ACCESS_TOKEN_EXPIRES }
+    );
+
+    await redis.set(
+      redis.set(`Last_Access_Token_${req.user.userId}_${req.headers["hardware-id"]}`, newAccessToken),
+    );
+
+    return res.status(200).json({
       authenticated_user: req.user,
       status: "success",
-      data: { count: allUsersCount, users: allUsers },
+      data: { count: allUsersCount, user: userData }, // ส่งข้อมูลผู้ใช้ที่ค้นหาได้
       token: newAccessToken,
     });
+  } catch (error) {
+    return res.status(500).json({ status: "error", message: error.message });
+  }
 };
 
 const deleteOneAccount = async (req, res) => {
