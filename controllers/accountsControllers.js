@@ -635,17 +635,35 @@ const getAllAccounts = async (req, res) => {
       });
     }
 
-    const userIdFromParams = req.params.user; // ดึง userId จาก URL params
-    console.log("User ID from params:", userIdFromParams); // ตรวจสอบว่าได้รับค่าหรือไม่
+    const mongoose = require('mongoose');
 
-    // ดึงข้อมูลจากฐานข้อมูลโดยใช้ userId ที่ได้รับ
-    let userData = await user.findById(userIdFromParams); // ใช้ findById ถ้าหาก userId เป็น MongoDB ObjectID
-    if (!userData) {
-      return res.status(404).json({
-        status: "error",
-        message: "User not found.",
-      });
-    }
+const userIdFromParams = req.params.user; // ดึง userId จาก URL params
+console.log("User ID from params:", userIdFromParams); // ตรวจสอบค่า userId
+
+// ตรวจสอบว่า userId ที่ได้รับเป็น ObjectId ที่ถูกต้อง
+if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
+  return res.status(400).json({
+    status: "error",
+    message: "Invalid user ID format.",
+  });
+}
+
+// ดึงข้อมูลจากฐานข้อมูลโดยใช้ userId ที่ได้รับ
+const userData = await user.findById(userIdFromParams); // ใช้ findById สำหรับ ObjectId
+if (!userData) {
+  return res.status(404).json({
+    status: "error",
+    message: "User not found.",
+  });
+}
+
+// ถ้าพบข้อมูลผู้ใช้
+console.log("User Data:", userData);
+return res.status(200).json({
+  status: "success",
+  data: userData,
+});
+
 
     let allUsersCount = await user.countDocuments();
 
