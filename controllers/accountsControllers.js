@@ -637,7 +637,7 @@ const getAllAccounts = async (req, res) => {
 
     const mongoose = require('mongoose');
 
-const userIdFromParams = req.params.user; // ดึง userId จาก URL params
+const userIdFromParams = req.params._id; // ดึง userId จาก URL params
 console.log("User ID from params:", userIdFromParams); // ตรวจสอบค่า userId
 
 // ตรวจสอบว่า userId ที่ได้รับเป็น ObjectId ที่ถูกต้อง
